@@ -20,6 +20,7 @@ test.
 The individual neural networks have two layers, with 32 hidden units.
 
 > Layer 1: 784 -> 32, relu activation function
+
 > Layer 2: 32 -> 10, softmax activation function
 
 ### Poor Neural Network Accuracy
