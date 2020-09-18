@@ -13,14 +13,14 @@ struct RunResult
 end
 
 function percent_greater_than(x, pos, neg)
-  pos_len = length(filter(e -> e.score > x, pos)) + 1e-30 # prevent divide by 0
-  neg_len = length(filter(e -> e.score > x, neg))
+  pos_len = length(filter(e -> e.score >= x, pos)) + 1e-30 # prevent divide by 0
+  neg_len = length(filter(e -> e.score >= x, neg))
   return pos_len / (pos_len + neg_len)
 end
 
 function percent_less_than(x, pos, neg)
-  pos_len = length(filter(e -> e.score < x, pos))
-  neg_len = length(filter(e -> e.score < x, neg)) + 1e-30 # prevent divide by 0
+  pos_len = length(filter(e -> e.score <= x, pos))
+  neg_len = length(filter(e -> e.score <= x, neg)) + 1e-30 # prevent divide by 0
   return pos_len / (pos_len + neg_len)
 end
 
@@ -83,54 +83,73 @@ function main()
   DATA = "2_scored_test_data.dat"
   ((test1_pos, test1_neg), (test2_pos, test2_neg)) = Serialization.deserialize(DATA)
 
+  println("Test set statistics -- test1:")
   @show map(length, test1_pos)
   @show map(length, test1_neg)
   @show sum(map(length, test1_pos)) + sum(map(length, test1_neg))
   println()
 
+  println("Test set statistics -- test2:")
   @show map(length, test2_pos)
   @show map(length, test2_neg)
   @show sum(map(length, test2_pos)) + sum(map(length, test2_neg))
   println()
 
-  ks_greater = ks_greater_than(test1_pos, test1_neg, test2_pos, test2_neg)
-  @show ks_greater
-
-  alphas_greater = Array{Float64, 1}()
-  for i=1:10
-    m = length(test1_pos[i]) + length(test1_neg[i])
-    n = length(test2_pos[i]) + length(test2_neg[i])
-    alpha = seek_alpha(ks_greater[i], m, n)
-
-    # println("sqrt(-log(a/2)/2) * sqrt(($n+$m) / ($n*$m)) = $(ks_greater[i])    [a should be equal to $alpha")
-
-    push!(alphas_greater, alpha)
-  end
-  @show alphas_greater
-
+  println("Writing KS metrics to disk")
   println()
 
-  ks_lesser = ks_less_than(test1_pos, test1_neg, test2_pos, test2_neg)
-  @show ks_lesser
+  f = open("3_ks_stats.csv", "w")
+  println(f, "greater_than, category, ks, alpha")
+  begin
+    ks_greater = ks_greater_than(test1_pos, test1_neg, test2_pos, test2_neg)
+    @show ks_greater
 
-  alphas_lesser = Array{Float64, 1}()
-  for i=1:10
-    m = length(test1_pos[i]) + length(test1_neg[i])
-    n = length(test2_pos[i]) + length(test2_neg[i])
+    alphas_greater = Array{Float64, 1}()
+    for i=1:10
+      m = length(test1_pos[i]) + length(test1_neg[i])
+      n = length(test2_pos[i]) + length(test2_neg[i])
+      alpha = seek_alpha(ks_greater[i], m, n)
 
-    alpha = seek_alpha(ks_lesser[i], m, n)
+      #println("sqrt(-log(a/2)/2) * sqrt(($n+$m) / ($n*$m)) = $(ks_greater[i])    [a should be equal to $alpha")
 
-    # println("sqrt(-log(a/2)/2) * sqrt(($n+$m) / ($n*$m)) = $(ks_lesser[i])    [a should be equal to $alpha")
+      push!(alphas_greater, alpha)
+    end
+    @show alphas_greater
 
-    push!(alphas_lesser, alpha)
+    for i=1:10
+      println(f, "1, $i, $(ks_greater[i]), $(alphas_greater[i])")
+    end
   end
-  @show alphas_lesser
+
+  begin
+    ks_lesser = ks_less_than(test1_pos, test1_neg, test2_pos, test2_neg)
+    @show ks_lesser
+
+    alphas_lesser = Array{Float64, 1}()
+    for i=1:10
+      m = length(test1_pos[i]) + length(test1_neg[i])
+      n = length(test2_pos[i]) + length(test2_neg[i])
+
+      alpha = seek_alpha(ks_lesser[i], m, n)
+
+      #println("sqrt(-log(a/2)/2) * sqrt(($n+$m) / ($n*$m)) = $(ks_lesser[i])    [a should be equal to $alpha")
+
+      push!(alphas_lesser, alpha)
+    end
+    @show alphas_lesser
+
+    for i=1:10
+      println(f, "0, $i, $(ks_lesser[i]), $(alphas_lesser[i])")
+    end
+  end
+
+  close(f)
 
 
   println()
   println("Writing score details to disk")
 
-  f = open("3_scoring_extra_info.csv", "w")
+  f = open("3_scoring_full_data.csv", "w")
   confidence_plus_softmax(f, 1, test1_pos, test1_neg)
   confidence_plus_softmax(f, 2, test2_pos, test2_neg)
   close(f)
