@@ -12,7 +12,8 @@ else
   static_shuffle = Array{Int64,1}()
 
   if length(ARGS) == 0
-    push!(ARGS, "no")
+    println("USAGE: julia 1_reproducibility.jl (MIX|KEEP|TRIM) [prob] [cats...]")
+    exit(0)
   end
 
   if ARGS[1] == "KEEP"
@@ -37,8 +38,12 @@ else
       end
       static_shuffle = vcat(shuffle(static_shuffle), Array{Int64,1}(50_001:70_000))
     else
-      println("mixing the mnist official test in for potential training.")
-      static_shuffle = shuffle!(Array{Int64,1}(1:70_000))
+      if ARGS[1] == "MIX"
+        println("mixing the mnist official test in for potential training.")
+        static_shuffle = shuffle!(Array{Int64,1}(1:70_000))
+      else
+        println("Unrecognized command. See README.md")
+      end
     end
   end
 

@@ -13,10 +13,10 @@ First we generate a static shuffling of the mnist training and test
 datasets. The output file "1_static_shuffle.dat" will be created. Three
 modes are supported:
 
-> julia 1_reproducibility.jl
+> julia 1_reproducibility.jl MIX
 
-With no arguments, the script combines the training and test data into
-a single array of length 70,000, segmenting off two length 10,000
+With the MIX option, the script combines the training and test data
+into a single array of length 70,000, segmenting off two length 10,000
 portions for our test1 and test2 datasets.
 
 > julia 1_reproducibility.jl KEEP
