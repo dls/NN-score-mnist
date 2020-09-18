@@ -43,30 +43,39 @@ understanding the properties thereof, we create two test sets.
 
 ## How to run
 
+### Setup: Make a new subdirectory
+
+The scripts create cached assets during execution, so start by making
+a new directory to hold your experiment's results.
+
+> mkdir my_experiment
+
+> cd my_experiment
+
 ### Step 1: Reproducibility
 
 First we generate a static shuffling of the mnist training and test
 datasets. The output file "1_static_shuffle.dat" will be created. Three
 modes are supported:
 
-> julia 1_reproducibility.jl MIX
+> julia ../1_reproducibility.jl MIX
 
 With the MIX option, the script combines the training and test data
 into a single array of length 70,000, segmenting off two length 10,000
 portions for our test1 and test2 datasets.
 
-> julia 1_reproducibility.jl KEEP
+> julia ../1_reproducibility.jl KEEP
 
 With the KEEP option, the script keeps the mnist test data separate as
 the test2 dataset, segmenting one length 10,000 portions for the test1
 dataset. This is desirable because the mnist official test set
 includes crossed 7s, unlike the training set.
 
-> julia 1_reproducibility TRIM p cat_1 cat_2 ...
+> julia ../1_reproducibility TRIM p cat_1 cat_2 ...
 
 With the TRIM option, the script removes training examples in cat_1, ... cat_n with probability p, operating as KEEP for the test1 and test2 datasets.
 
-example: julia 1_reproducibility 0.5 3 4 7
+example: julia ../1_reproducibility 0.5 3 4 7
 
 This removes training examples from categories 3, 4, and 7 with a 50% probability.
 
@@ -86,11 +95,11 @@ struct RunResult
   correct_category :: Int64
 end
 
-> julia 2_train_and_run.jl
+> julia ../2_train_and_run.jl
 
 ### Step 3: Reports on the test1 and test2 performance
 
-> julia 3_report.jl
+> julia ../3_report.jl
 
 Here we compute the Kolmogorov-Smirnov test values, and report the
 corresponding maximum alpha values.
