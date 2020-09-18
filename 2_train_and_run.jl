@@ -5,22 +5,14 @@ using Flux.Data: DataLoader
 using Flux: onehotbatch, onecold, logitcrossentropy, throttle, @epochs
 using Base.Iterators: repeated
 using Parameters: @with_kw
-using CUDAapi
 using MLDatasets
 using Serialization
-
-if has_cuda()		# Check if CUDA is available
-  @info "CUDA is on"
-  import CuArrays		# If CUDA is available, import CuArrays
-  CuArrays.allowscalar(false)
-end
 
 @with_kw mutable struct Args3
   η::Float64 = 3e-4       # learning rate
   segment = 0             # 0-9
   batchsize::Int = 1024   # batch size
   epochs::Int = 10        # number of epochs
-  device::Function = gpu  # set as gpu, if gpu available
   throttle::Int = 1		    # Throttle timeout
 end
 
@@ -48,7 +40,7 @@ const (SHUFFLED_X, SHUFFLED_Y) = load_shuffled_dataset()
 function get_segment(segment, batchsize)
   # segmentation for cross validation
   # training set is 1:total_size in SHUFFLED_X and SHUFFLED_Y
-  # testing sets(!) is -20_000:end in SHUFFLED_X and SHUFFLED_Y
+  # testing sets(!) are at -20_000:end in SHUFFLED_X and SHUFFLED_Y
 
   total_size = length(SHUFFLED_Y) - 20_000
   segment_size = Int64(floor(total_size / 10))
@@ -136,7 +128,7 @@ function train(args)
   train_data, test_data = get_segment(args.segment, args.batchsize)
 
   # Construct model
-  m = args.device(build_model())
+  m = build_model()
   loss(x,y) = logitcrossentropy(m(x), y)
 
   ## Train model
