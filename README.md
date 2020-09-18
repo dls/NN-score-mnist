@@ -3,9 +3,9 @@
 This repository contains reproducible experiments related to "A note
 reguarding an extra use of test data."
 
-Of primary concern is the question of how general the score to
-confidence method across different types of data, and so the primary
-variations investigated were transforms on the dataset.
+Of primary concern was the question of how general the score to
+confidence method would prove across different datasets, and so the
+primary variations investigated were transforms on the dataset.
 
 ## Overview
 
