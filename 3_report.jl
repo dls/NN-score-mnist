@@ -158,31 +158,42 @@ function main()
   println("Writing plots")
 
   plots = Array{Plot,1}()
-  function render_scatter_plot(set_name, category, pos, neg)
-    values = DataFrames.DataFrame(score = [], correct = [], confidence=[])
-    for e = pos
-      push!(values, Dict(:score => e.score,
-                         :correct => true,
-                         :confidence => percent_greater_than(e.score, pos, neg)))
-    end
-    for e = neg
-      push!(values, Dict(:score => e.score,
-                         :correct => false,
-                         :confidence => percent_greater_than(e.score, pos, neg)))
+  function render_scatter_plot(category, pos1, neg1, pos2, neg2)
+    function make_layers(pos, neg, c1, c2)
+      values = DataFrames.DataFrame(Score = [], Correct = [], Confidence=[])
+      for e = pos
+        push!(values, Dict(:Score => e.score,
+                           :Correct => true,
+                           :Confidence => percent_greater_than(e.score, pos, neg)))
+      end
+      l1 = layer(values, x=:Score, y=:Confidence, Geom.point, Theme(default_color=c1, point_size = 0.5 * mm, discrete_highlight_color=c->nothing))
+
+      values = DataFrames.DataFrame(Score = [], Correct = [], Confidence=[])
+      for e = neg
+        push!(values, Dict(:Score => e.score,
+                           :Correct => false,
+                           :Confidence => percent_greater_than(e.score, pos, neg)))
+      end
+      l2 = layer(values, x=:Score, y=:Confidence, Geom.point, Theme(default_color=c2, point_size = 0.5 * mm, discrete_highlight_color=c->nothing))
+      return (l1, l2)
     end
 
-    return plot(values, Guide.title("$set_name - Digit $(category-1)"),
-                x=:score, y=:confidence, color=:correct, Geom.point,
+    l11, l12 = make_layers(pos1, neg1, "blue", "red")
+    l21, l22 = make_layers(pos2, neg2, "green", "orange")
+
+    return plot(l22, l12, l21, l11, Guide.manual_color_key("Correctness",
+                                                           ["true pos 1", "false pos 1", "true pos 2", "false pos 2"],
+                                                           ["blue", "red", "green", "orange"]),
+                Guide.title("Digit $(category - 1)"),
                 Scale.x_continuous(minvalue=0, maxvalue=10.0),
-                Scale.y_continuous(minvalue=0.85, maxvalue=1.0))
+                Scale.y_continuous(minvalue=0.86, maxvalue=1.0))
   end
 
   for cat=1:10
-    push!(plots, render_scatter_plot("Set 1", cat, test1_pos[cat], test1_neg[cat]))
-    push!(plots, render_scatter_plot("Set 2", cat, test2_pos[cat], test2_neg[cat]))
+    push!(plots, render_scatter_plot(cat, test1_pos[cat], test1_neg[cat], test2_pos[cat], test2_neg[cat]))
   end
 
-  set_default_plot_size(6inch, 80inch)
+  set_default_plot_size(12inch, 80inch)
   vstack(plots) |> PDF("3_scatterplot.pdf")
 
   println("all done.")
