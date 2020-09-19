@@ -219,7 +219,7 @@ function main()
   else
     println("Training the model.")
     models = train_models()
-    Serialization.serialize(MODEL_FILE_NAME, train_models())
+    Serialization.serialize(MODEL_FILE_NAME, models)
 
     # We've just trained a new model, so cached classification is invalid
     if isfile(DATA_FILE_NAME)
