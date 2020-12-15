@@ -240,7 +240,7 @@ end
 function bbq(df, target_df; SAMPLES_COUNT=100, BIN_COUNT=10)
   function theta_for_range(lower, upper)
     r = df |> score_in_bounds(lower, upper) |> DataFrame
-    return count(r |> true_positive()) / (count(r) + 0.00001)
+    return (0.001 + count(r |> true_positive())) / (count(r) + 0.002)
   end
 
   function thetas_for_bins(bins)
@@ -253,25 +253,29 @@ function bbq(df, target_df; SAMPLES_COUNT=100, BIN_COUNT=10)
     return thetas
   end
 
-  function theta_for_row(e, bins, thetas)
+  function theta_idx_for_row(e, bins, thetas)
     for i=1:length(bins)
       if e.score < bins[i]
-        return thetas[i]
+        return i
       end
     end
-    return thetas[end]
+    return length(thetas)
   end
+
+  theta_for_row(e, bins, thetas) = thetas[theta_idx_for_row(e, bins, thetas)]
 
   function p_of_s(bins, thetas)
     p = 0.0
     for e=eachrow(df)
-      t = theta_for_row(e, bins, thetas)
+      ti = theta_idx_for_row(e, bins, thetas)
+      t = thetas[ti]
       if e.correct_category == e.classified_category
         p += log(t)
       else
         p += log(1 - t)
       end
     end
+
     return exp(p)
   end
 
@@ -282,12 +286,14 @@ function bbq(df, target_df; SAMPLES_COUNT=100, BIN_COUNT=10)
     return Segmentation(bins, thetas, p)
   end
 
+  # phase 1: build the segmentations
   segs = [mk_s() for i=1:SAMPLES_COUNT]
   normalizatoin_factor = sum([s.p for s=segs])
   for e=segs
     e.p /= normalizatoin_factor
   end
 
+  # phase 2: use them for classification
   err = 0.0
   for e=eachrow(target_df)
     estimate = 0.0
@@ -307,7 +313,7 @@ end
 function main3(samples_count, bin_count)
   println("Running BBQ with $samples_count samples, $bin_count bins")
   for i=0:9
-    print("  category $i: ")
+    print("   category $i ECE: ")
 
     df1 = test1 |> claimed_category(i) |> DataFrame
     df2 = test2 |> claimed_category(i) |> DataFrame
