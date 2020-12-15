@@ -2,6 +2,7 @@ using Serialization
 using Optim, LineSearches
 using NNlib
 using DataFrames, Query
+import Base.show
 
 h(x) = round(x * 100) / 100
 
@@ -222,39 +223,104 @@ function main2()
   end
 end
 
-main()
+# main()
 
+mutable struct Segmentation
+  bins :: Array{Float64, 1}
+  thetas :: Array{Float64, 1}
+  p :: Float64
+end
 
-function bbq(df)
-  esses = [] # TODO
+function Base.show(io::IO, s::Segmentation)
+  println(io, "p $(s.p):")
+  println(io, "\tbins: $(s.bins)")
+  println(io, "\tthetas: $(s.thetas)")
+end
 
-  function estimate_confidence(e, s)
+function bbq(df, target_df; SAMPLES_COUNT=100, BIN_COUNT=10)
+  function theta_for_range(lower, upper)
+    r = df |> score_in_bounds(lower, upper) |> DataFrame
+    return count(r |> true_positive()) / (count(r) + 0.00001)
   end
 
-  function p_of_d(s)
-    logp = 0
-    for row=eachrow(df)
-      confidence = estimate_confidence(row, s)
-      if row.correct_category == row.classified_category
-        err += log(confidence)
-      else
-        err += log(1 - confidence)
+  function thetas_for_bins(bins)
+    thetas = zeros(length(bins)+1)
+    thetas[1] = theta_for_range(0.0, bins[1])
+    for i=2:length(bins)
+      thetas[i] = theta_for_range(bins[i-1], bins[i])
+    end
+    thetas[end] = theta_for_range(bins[end], 10.0)
+    return thetas
+  end
+
+  function theta_for_row(e, bins, thetas)
+    for i=1:length(bins)
+      if e.score < bins[i]
+        return thetas[i]
       end
     end
-    return exp(logp)
+    return thetas[end]
   end
 
-  function p_of_s(s) # TODO
-    p(d | S)
+  function p_of_s(bins, thetas)
+    p = 0.0
+    for e=eachrow(df)
+      t = theta_for_row(e, bins, thetas)
+      if e.correct_category == e.classified_category
+        p += log(t)
+      else
+        p += log(1 - t)
+      end
+    end
+    return exp(p)
   end
 
-  function p_of_q(s) # TODO
+  function mk_s()
+    bins = sort(rand(BIN_COUNT)) * 10
+    thetas = thetas_for_bins(bins)
+    p = p_of_s(bins, thetas)
+    return Segmentation(bins, thetas, p)
   end
 
-  return sum([p_of_q(s) * p_of_s(s) for s=esses])
+  segs = [mk_s() for i=1:SAMPLES_COUNT]
+  normalizatoin_factor = sum([s.p for s=segs])
+  for e=segs
+    e.p /= normalizatoin_factor
+  end
+
+  err = 0.0
+  for e=eachrow(target_df)
+    estimate = 0.0
+    for s=segs
+      estimate += s.p * theta_for_row(e, s.bins, s.thetas)
+    end
+
+    if e.correct_category == e.classified_category
+      err += 1 - estimate
+    else
+      err += estimate
+    end
+  end
+  return err
 end
+
+function main3(samples_count, bin_count)
+  println("Running BBQ with $samples_count samples, $bin_count bins")
+  for i=0:9
+    print("  category $i: ")
+
+    df1 = test1 |> claimed_category(i) |> DataFrame
+    df2 = test2 |> claimed_category(i) |> DataFrame
+
+    err1 = bbq(df1, df2; SAMPLES_COUNT=samples_count, BIN_COUNT=bin_count) / count(df2)
+    err2 = bbq(df2, df1; SAMPLES_COUNT=samples_count, BIN_COUNT=bin_count) / count(df1)
+
+    println("$(h(100*err1))%\t$(h(100*err2))%")
+  end
+end
+
+#main3()
 
 # TODO:
 # - maybe stare at early results?
 # - decide how to officially judge
-# - BBQ
