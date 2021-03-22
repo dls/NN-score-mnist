@@ -159,9 +159,10 @@ end
 
 
 struct RunResult
-  output :: Array{Float32, 1}
+  raw_output :: Array{Float64, 2}
+  output :: Array{Float64, 1}
   max_output_i :: Int64
-  score :: Float32
+  score :: Float64
   correct_category :: Int64
 end
 
@@ -169,15 +170,22 @@ function score_data(models, x, y)
   true_pos  = [[], [], [], [], [], [], [], [], [], []]
   false_pos = [[], [], [], [], [], [], [], [], [], []]
 
+  raw_res = zeros(10, 10, length(y))
   res = zeros(10, length(y))
-  for m in models
-    res .+= m(x)
+
+  models2 = map(m -> Chain(m.layers[1:end-1]...), models)
+
+  for i=1:length(models2)
+    m = models2[i]
+    output = m(x)
+    raw_res[i, :, :] .+= output
+    res .+= softmax(output)
   end
 
   for i=1:size(res, 2)
     (score, idx) = findmax(res[:,i])
 
-    r = RunResult(copy(res[:,i]), idx-1, score, y[i])
+    r = RunResult(copy(raw_res[:,:,i]), copy(res[:,i]), idx-1, score, y[i])
 
     if r.max_output_i == r.correct_category
       push!(true_pos[idx], r)

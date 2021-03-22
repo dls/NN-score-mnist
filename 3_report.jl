@@ -4,11 +4,11 @@ using Serialization
 
 import Cairo, Fontconfig
 
-
 struct RunResult
-  output :: Array{Float32, 1}
+  raw_output :: Array{Float64, 2}
+  output :: Array{Float64, 1}
   max_output_i :: Int64
-  score :: Float32
+  score :: Float64
   correct_category :: Int64
 end
 
